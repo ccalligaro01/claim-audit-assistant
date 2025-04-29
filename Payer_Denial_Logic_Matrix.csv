@@ -1,0 +1,9 @@
+Payer,Common Denial Reasons,Appeals Tip,Source Policy
+BRMS,Medical necessity not supported by documentation,Submit peer-reviewed documentation and necessity arguments,BRMS Cost Containment Policy
+90 Degree Benefits,Ineligible member or missing pre-authorization,Verify eligibility at service date and secure retro auth if possible,90 Degree Benefits Provider Portal
+OneShare Ministries,Non-sharing eligibility based on guidelines,Reference member guidelines and dispute on ethical sharing basis,OneShare Health Sharing Guidelines
+BMI,Lack of authorization or non-covered service,Confirm benefits and submit detailed provider notes,BMI Plan Contract
+Medicare,"Missing modifiers, global package errors, medical necessity",Use LCD/NCD citations and strong documentation of necessity,Medicare Coverage Database
+UHC,"Modifier misuse, prior authorization not obtained",Appeal with medical records and pre-auth confirmations,UHC Provider Policies
+BCBS,"Modifier audit failures, global period errors",Use strong modifier documentation and global surgery clarifications,BCBS Modifier Policy
+Aetna,"Missing clinical necessity, lack of timely authorization",Appeal using medical policy and clinical notes detailing necessity,Aetna Clinical Policy Bulletins
