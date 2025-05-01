@@ -68,7 +68,19 @@ if uploaded_file is not None:
 st.sidebar.markdown("---")
 st.sidebar.markdown("Built by YOU 🚀")
 
-# 💬 Chat Feature (Simple)
+# ------------------------------
+# 💬 Chat Feature with Custom Q&A Bank
+# ------------------------------
+
+# Load Custom Q&A CSV once per session
+if 'qa_bank' not in st.session_state:
+    try:
+        qa_bank_df = pd.read_csv('Custom_QA_Bank.csv')
+        qa_bank_df['Question'] = qa_bank_df['Question'].astype(str).str.lower().str.strip()
+        st.session_state.qa_bank = qa_bank_df
+    except FileNotFoundError:
+        st.session_state.qa_bank = pd.DataFrame(columns=['Question', 'Answer'])
+
 if 'qa_history' not in st.session_state:
     st.session_state.qa_history = []
 
@@ -78,21 +90,23 @@ if uploaded_file is not None:
     user_question = st.chat_input("Ask about a CPT code, modifier, or denial situation...")
 
     if user_question:
+        user_question_lower = user_question.lower().strip()
         st.markdown(f"🔎 **Searching for:** `{user_question}`")
 
+        # --- 1. Search for claim matches ---
         matches = []
 
         for idx, row in df.iterrows():
             score = 0
             explanation = []
 
-            if user_question.lower() in str(row['CPT Code']).lower():
+            if user_question_lower in str(row['CPT Code']).lower():
                 score += 2
                 explanation.append("CPT match")
-            if user_question.lower() in str(row['Modifier']).lower():
+            if user_question_lower in str(row['Modifier']).lower():
                 score += 1
                 explanation.append("Modifier match")
-            if user_question.lower() in str(row['Denial Reason']).lower():
+            if user_question_lower in str(row['Denial Reason']).lower():
                 score += 0.5
                 explanation.append("Denial reason match")
 
@@ -103,22 +117,22 @@ if uploaded_file is not None:
                     "Claim": row
                 })
 
+        # --- 2. Return top-ranked matches if any ---
         if matches:
             matches = sorted(matches, key=lambda x: x['Score'], reverse=True)
 
             st.success(f"✅ Found {len(matches)} matching claims, ranked by relevance!")
-            st.markdown("---")
-
             examples_text = ""
+
             for match in matches:
                 example = match["Claim"]
                 st.markdown(f"**📋 Example Claim (Score: {match['Score']}, Reason: {match['Explanation']}):**")
                 st.markdown(f"- **Claim ID:** {example['Claim ID']}")
-                st.markdown(f"- **CPT Code:** {example['CPT Code']}**")
-                st.markdown(f"- **Modifier:** {example['Modifier']}**")
-                st.markdown(f"- **ICD-10 Code:** {example['ICD-10 Code']}**")
-                st.markdown(f"- **Payer:** {example['Payer']}**")
-                st.markdown(f"- **Denial Reason:** {example['Denial Reason']}**")
+                st.markdown(f"- **CPT Code:** {example['CPT Code']}")
+                st.markdown(f"- **Modifier:** {example['Modifier']}")
+                st.markdown(f"- **ICD-10 Code:** {example['ICD-10 Code']}")
+                st.markdown(f"- **Payer:** {example['Payer']}")
+                st.markdown(f"- **Denial Reason:** {example['Denial Reason']}")
                 st.markdown("---")
 
                 examples_text += f"- (Score {match['Score']}) Claim ID: {example['Claim ID']}, CPT: {example['CPT Code']}, Modifier: {example['Modifier']}, Payer: {example['Payer']}, Denial: {example['Denial Reason']} (Reason: {match['Explanation']})\n"
@@ -129,19 +143,30 @@ if uploaded_file is not None:
             })
 
         else:
-            generated_answer = "⚠️ No matching claims found. Try mentioning a CPT, Modifier, or Denial Keyword."
-            st.warning(generated_answer)
+            # --- 3. Fall back to Custom Q&A Bank ---
+            match = st.session_state.qa_bank[st.session_state.qa_bank['Question'].str.contains(user_question_lower)]
 
-            st.session_state.qa_history.append({
-                "Question": user_question,
-                "Answer": generated_answer
-            })
+            if not match.empty:
+                answer = match.iloc[0]['Answer']
+                st.success(f"📘 Preloaded Answer:\n\n{answer}")
+                st.session_state.qa_history.append({
+                    "Question": user_question,
+                    "Answer": answer
+                })
+            else:
+                # --- 4. Total miss ---
+                generated_answer = "⚠️ No matching claims or preloaded answers found. Try rephrasing or using keywords like 'global period' or 'modifier 59'."
+                st.warning(generated_answer)
 
-# Conversation history display
+                st.session_state.qa_history.append({
+                    "Question": user_question,
+                    "Answer": generated_answer
+                })
+
+# 🧠 Conversation memory
 if st.session_state.qa_history:
     st.subheader("📜 Conversation History (Memory)")
     for entry in st.session_state.qa_history:
         st.markdown(f"**Q:** {entry['Question']}")
         st.markdown(f"**A:** {entry['Answer']}")
         st.markdown("---")
-
