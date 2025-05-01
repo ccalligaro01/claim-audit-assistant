@@ -132,9 +132,8 @@ if uploaded_file is not None:
             match = qa_bank_df[qa_bank_df['Question'].str.contains(user_question_lower, na=False)]
             if not match.empty:
                 answer = match.iloc[0]['Answer']
-                st.success(f"📘 Preloaded Answer:
+                st.success(f"📘 Preloaded Answer:\n\n{answer}")
 
-{answer}")
                 st.session_state.qa_history.append({"Question": user_question, "Answer": answer})
             else:
                 fallback = "⚠️ No matching claims or preloaded answers found. Try rephrasing or using keywords like 'global period' or 'modifier 59'."
