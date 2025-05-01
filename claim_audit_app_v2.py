@@ -75,7 +75,7 @@ st.sidebar.markdown("Built by YOU 🚀")
 # Load Custom Q&A CSV once per session
 if 'qa_bank' not in st.session_state:
     try:
-        qa_bank_df = pd.read_csv('Cleaned_Custom_QA_Bank.csv')
+        qa_data = pd.read_csv('Custom_QA_Bank.csv')
         qa_bank_df['Question'] = qa_bank_df['Question'].astype(str).str.lower().str.strip()
         st.session_state.qa_bank = qa_bank_df
     except FileNotFoundError:
