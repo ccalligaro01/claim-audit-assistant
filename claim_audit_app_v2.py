@@ -5,10 +5,13 @@ import pandas as pd
 citation_data = pd.read_csv('Citation_Knowledge_Base.csv')
 payer_logic_data = pd.read_csv('Payer_Denial_Logic_Matrix.csv')
 
-st.title("🩺 AI Claim Audit Assistant (v3 - Publish Clean Version)")
+# ✅ Load pre-written Q&A
+qa_bank_df = pd.read_csv('Cleaned_Custom_QA_Bank.csv')
+qa_bank_df['Question'] = qa_bank_df['Question'].astype(str).str.lower().str.strip()
+
+st.title("🩺 AI Claim Audit Assistant (v3 - Q&A Enhanced)")
 
 st.sidebar.header("Upload Claims CSV File")
-
 uploaded_file = st.sidebar.file_uploader("Choose a CSV file", type=["csv"])
 
 if uploaded_file is not None:
@@ -32,8 +35,7 @@ if uploaded_file is not None:
     st.metric("Clean Claims", len(clean_claims))
 
     st.subheader("🔍 Detailed Claim Analysis")
-
-    for index, row in df.iterrows():
+    for _, row in df.iterrows():
         st.markdown("---")
         st.markdown(f"### 🆔 Claim ID: {row['Claim ID']}")
         st.markdown(f"- CPT Code: **{row['CPT Code']}**")
@@ -46,21 +48,17 @@ if uploaded_file is not None:
 
         if row['Denial Reason'] != "None":
             st.error(f"⚠️ Denial Detected: {row['Denial Reason']}")
-
-            # Payer-specific tips
             payer_info = payer_logic_data[payer_logic_data['Payer'] == row['Payer']]
             if not payer_info.empty:
                 st.markdown(f"**Payer Denial Tip:** {payer_info.iloc[0]['Appeals Tip']}")
                 st.markdown(f"**Reference Policy:** {payer_info.iloc[0]['Source Policy']}")
 
-            # Pull normal citations
             if pd.notna(row['Denial Reason']) and "Modifier" in row['Denial Reason']:
                 citation_info = citation_data[citation_data['Source'].str.contains("Modifier", case=False)]
                 if not citation_info.empty:
                     st.markdown("📚 **Relevant Coding Citations:**")
-                    for idx, cite in citation_info.iterrows():
+                    for _, cite in citation_info.iterrows():
                         st.markdown(f"- **{cite['Source']}**: {cite['Summary of Rule']} [More Info]({cite['Link or Document']})")
-
         else:
             st.success("✅ No denial detected!")
 
@@ -68,19 +66,7 @@ if uploaded_file is not None:
 st.sidebar.markdown("---")
 st.sidebar.markdown("Built by YOU 🚀")
 
-# ------------------------------
-# 💬 Chat Feature with Custom Q&A Bank
-# ------------------------------
-
-# Load Custom Q&A CSV once per session
-if 'qa_bank' not in st.session_state:
-    try:
-        qa_data = pd.read_csv('Custom_QA_Bank.csv')
-        qa_bank_df['Question'] = qa_bank_df['Question'].astype(str).str.lower().str.strip()
-        st.session_state.qa_bank = qa_bank_df
-    except FileNotFoundError:
-        st.session_state.qa_bank = pd.DataFrame(columns=['Question', 'Answer'])
-
+# Memory
 if 'qa_history' not in st.session_state:
     st.session_state.qa_history = []
 
@@ -88,18 +74,14 @@ st.subheader("💬 Ask a Claims Question!")
 
 if uploaded_file is not None:
     user_question = st.chat_input("Ask about a CPT code, modifier, or denial situation...")
-
     if user_question:
         user_question_lower = user_question.lower().strip()
         st.markdown(f"🔎 **Searching for:** `{user_question}`")
-
-        # --- 1. Search for claim matches ---
         matches = []
 
-        for idx, row in df.iterrows():
+        for _, row in df.iterrows():
             score = 0
             explanation = []
-
             if user_question_lower in str(row['CPT Code']).lower():
                 score += 2
                 explanation.append("CPT match")
@@ -117,10 +99,8 @@ if uploaded_file is not None:
                     "Claim": row
                 })
 
-        # --- 2. Return top-ranked matches if any ---
         if matches:
             matches = sorted(matches, key=lambda x: x['Score'], reverse=True)
-
             st.success(f"✅ Found {len(matches)} matching claims, ranked by relevance!")
             examples_text = ""
 
@@ -143,9 +123,7 @@ if uploaded_file is not None:
             })
 
         else:
-            # --- 3. Fall back to Custom Q&A Bank ---
-            match = st.session_state.qa_bank[st.session_state.qa_bank['Question'].str.contains(user_question_lower)]
-
+            match = qa_bank_df[qa_bank_df['Question'].str.contains(user_question_lower)]
             if not match.empty:
                 answer = match.iloc[0]['Answer']
                 st.success(f"📘 Preloaded Answer:\n\n{answer}")
@@ -154,16 +132,14 @@ if uploaded_file is not None:
                     "Answer": answer
                 })
             else:
-                # --- 4. Total miss ---
                 generated_answer = "⚠️ No matching claims or preloaded answers found. Try rephrasing or using keywords like 'global period' or 'modifier 59'."
                 st.warning(generated_answer)
-
                 st.session_state.qa_history.append({
                     "Question": user_question,
                     "Answer": generated_answer
                 })
 
-# 🧠 Conversation memory
+# 🧠 Memory
 if st.session_state.qa_history:
     st.subheader("📜 Conversation History (Memory)")
     for entry in st.session_state.qa_history:
