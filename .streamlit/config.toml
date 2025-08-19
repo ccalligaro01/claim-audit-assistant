@@ -1,11 +1,5 @@
-[server]
-headless = true
-
-[browser]
-gatherUsageStats = false
+[client]
+showSidebarNavigation = true
 
 [theme]
 base = "light"
-
-[general]
-mainPage = "claim_audit_app_v3.py"
